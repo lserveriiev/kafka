@@ -1,20 +1,67 @@
+buildscript {
+	repositories {
+		mavenLocal()
+	}
+	configurations.classpath {
+		resolutionStrategy {
+			cacheDynamicVersionsFor 0, 'seconds'
+			cacheChangingModulesFor 0, 'seconds'
+		}
+	}
+}
+
 plugins {
 	id 'org.springframework.boot' version '2.4.4'
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 	id 'java'
+	id 'com.github.davidmc24.gradle.plugin.avro' version '1.0.0'
 }
 
 group = 'io.lenur.kafka'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '11'
 
 repositories {
 	mavenCentral()
+	maven { url "https://packages.confluent.io/maven/" }
+}
+
+compileJava {
+	sourceCompatibility = 11
+	targetCompatibility = 11
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly(
+			'org.projectlombok:lombok:1.18.16',
+			'org.apache.avro:avro:1.10.1',
+			'org.apache.avro:avro-tools:1.10.1',
+	)
+
+	annotationProcessor 'org.projectlombok:lombok:1.18.16'
+
+	implementation (
+			'io.confluent:kafka-avro-serializer:6.0.1',
+			'io.confluent:kafka-streams-avro-serde:6.0.1',
+			"org.apache.kafka:kafka-clients:2.6.0",
+			"org.apache.kafka:kafka-streams:2.6.0",
+			'org.springframework.boot:spring-boot-starter-web',
+	)
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	testCompileOnly 'org.projectlombok:lombok:1.18.16'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
+}
+
+avro {
+	createSetters = true
+	createOptionalGetters = true
 }
 
 test {
