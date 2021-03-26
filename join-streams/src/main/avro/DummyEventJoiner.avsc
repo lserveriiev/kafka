@@ -1,0 +1,14 @@
+{
+  "namespace": "io.lenur.kafka.joinstreams.avro",
+  "type": "record",
+  "name": "DummyEventJoiner",
+
+  "fields": [
+    { "name": "correlationIdFirst", "type": "string" },
+    { "name": "documentIdFirst", "type": "string" },
+    { "name": "jobTypeFirst", "type": "string" },
+    { "name": "correlationIdSecond", "type": "string" },
+    { "name": "documentIdSecond", "type": "string" },
+    { "name": "jobTypeSecond", "type": "string" }
+  ]
+}

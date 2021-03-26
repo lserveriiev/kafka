@@ -1,5 +1,9 @@
 package io.lenur.kafka.joinstreams;
 
+import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
+import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
+import io.lenur.kafka.joinstreams.avro.DummyEvent;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.StreamJoined;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,6 +11,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.kafka.common.serialization.Serdes;
@@ -26,8 +32,16 @@ public class KafkaConsumerController {
     @Qualifier("consumerStringProperties")
     private Properties consumerStringProperties;
 
+    @Autowired
+    @Qualifier("consumerAvroProperties")
+    private Properties consumerAvroProperties;
+
+    @Autowired
+    private Config config;
+
     private KafkaStreams streamsInnerJoinString;
     private KafkaStreams streamsMultipleInnerJoinString;
+    private KafkaStreams streamsInnerJoinSchema;
 
     @PostMapping("/consumer/string/inner-join")
     public void streamStringInnerJoin() {
@@ -96,13 +110,51 @@ public class KafkaConsumerController {
         streamsMultipleInnerJoinString.start();
     }
 
-    private void stop () {
+    @PostMapping("/consumer/schema/inner-join")
+    public void startStreamSchemaInnerJoin() {
+        stop();
+
+        final Map<String, String> serdeConfig = Collections.singletonMap(
+                AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                config.getKafkaSchemaRegistryUrl());
+
+        final Serde<DummyEvent> valueSpecificAvroSerde = new SpecificAvroSerde<>();
+        valueSpecificAvroSerde.configure(serdeConfig, false);
+
+        final StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, DummyEvent> firstStream = builder.stream(Constant.FIRST_SCHEMA_TOPIC,
+                Consumed.with(Serdes.String(), valueSpecificAvroSerde));
+        KStream<String, DummyEvent> secondStream = builder.stream(Constant.SECOND_SCHEMA_TOPIC,
+                Consumed.with(Serdes.String(), valueSpecificAvroSerde));
+
+        var joined = firstStream.join(secondStream,
+                (firstValue, secondValue) -> new DummyEventValueJoiner().apply(firstValue, secondValue),
+                JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
+                StreamJoined.with(
+                        Serdes.String(),
+                        valueSpecificAvroSerde,
+                        valueSpecificAvroSerde)
+        );
+
+        joined.to(Constant.INNER_SCHEMA_TOPIC);
+
+        final Topology topology = builder.build();
+        consumerAvroProperties.put(StreamsConfig.APPLICATION_ID_CONFIG, "spike-stream-inner-join-schema-application-id");
+        streamsInnerJoinSchema = new KafkaStreams(topology, consumerAvroProperties);
+        streamsInnerJoinSchema.start();
+    }
+
+    private void stop() {
         if (streamsInnerJoinString != null) {
             streamsInnerJoinString.close();
         }
 
         if (streamsMultipleInnerJoinString != null) {
             streamsMultipleInnerJoinString.close();
+        }
+
+        if (streamsInnerJoinSchema != null) {
+            streamsInnerJoinSchema.close();
         }
     }
 }

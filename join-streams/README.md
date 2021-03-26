@@ -64,3 +64,29 @@ curl -X POST http://127.0.0.1:9090/consumer/string/multiple-stream-inner-join
 ```bash
 ./kafka-console-consumer --bootstrap-server kafka-join-stream:9092 --topic spike-multiple_inner-stream-topic-string --from-beginning
 ```
+
+### Join Avro schema message based topics
+
+#### Join two streams
+
+##### Create the messages
+```bash
+curl -X POST http://127.0.0.1:9090/producer/schema/first/send/1
+curl -X POST http://127.0.0.1:9090/producer/schema/second/send/1
+```
+
+###### Obtain the messages
+```bash
+./kafka-console-consumer --bootstrap-server kafka-join-stream:9092 --topic spike-first-stream-topic-schema --from-beginning
+./kafka-console-consumer --bootstrap-server kafka-join-stream:9092 --topic spike-second-stream-topic-schema --from-beginning
+```
+
+###### Join the streams
+```bash
+curl -X POST http://127.0.0.1:9090/consumer/schema/inner-join
+```
+
+###### Obtain the messages
+```bash
+./kafka-avro-console-consumer --bootstrap-server kafka-join-stream:9092 --topic spike-inner-stream-topic-schema --from-beginning | jq
+```

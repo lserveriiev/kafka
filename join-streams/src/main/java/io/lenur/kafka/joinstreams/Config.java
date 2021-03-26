@@ -9,4 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class Config {
     @Value("${config.kafka_bootstrap_servers}")
     private String kafkaBootstrapServers;
+
+    @Value("${config.kafka_schema_registry_url}")
+    private String kafkaSchemaRegistryUrl;
 }
