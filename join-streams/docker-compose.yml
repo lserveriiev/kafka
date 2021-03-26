@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  kafka-join-stream:
+    image: lensesio/fast-data-dev
+    container_name: kafka-join-stream
+    hostname: kafka-join-stream
+    ports:
+      - 2121:2121
+      - 3030:3030
+      - 8081:8081
+      - 8082:8082
+      - 8083:8083
+      - 9092:9092
+      - 9581:9581
+      - 9582:9582
+      - 9583:9583
+      - 9584:9584
+      - 2181:2181
+    networks:
+      kafka-stream-net:
+  kafka-join-stream-application:
+    image: kafka-join-stream-application
+    container_name: kafka-join-stream-application
+    hostname: kafka-join-stream-application
+    ports:
+      - 9090:9090
+    networks:
+      kafka-stream-net:
+
+networks:
+  kafka-stream-net:
+    driver: bridge
