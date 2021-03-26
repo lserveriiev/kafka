@@ -21,11 +21,13 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 public class KafkaConsumerController {
+
     @Autowired
     @Qualifier("consumerStringProperties")
     private Properties consumerStringProperties;
 
     private KafkaStreams streamsInnerJoinString;
+    private KafkaStreams streamsMultipleInnerJoinString;
 
     @PostMapping("/consumer/string/inner-join")
     public void streamStringInnerJoin() {
@@ -34,10 +36,10 @@ public class KafkaConsumerController {
 
         KStream<String, String> firstStream = builder.stream(Constant.FIRST_STRING_TOPIC,
                 Consumed.with(Serdes.String(), Serdes.String()));
-        KStream<String, String> rightStream = builder.stream(Constant.SECOND_STRING_TOPIC,
+        KStream<String, String> secondStream = builder.stream(Constant.SECOND_STRING_TOPIC,
                 Consumed.with(Serdes.String(), Serdes.String()));
 
-        KStream<String, String> joined = firstStream.join(rightStream,
+        KStream<String, String> joined = firstStream.join(secondStream,
                 (firstValue, secondValue) -> "first=" + firstValue + ", second=" + secondValue, /* ValueJoiner */
                 JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
                 StreamJoined.with(
@@ -55,9 +57,52 @@ public class KafkaConsumerController {
         streamsInnerJoinString.start();
     }
 
+    @PostMapping("/consumer/string/multiple-stream-inner-join")
+    public void multipleStreamStringInnerJoin() {
+        stop();
+
+        final StreamsBuilder builder = new StreamsBuilder();
+
+        KStream<String, String> firstStream = builder.stream(Constant.FIRST_STRING_TOPIC,
+                Consumed.with(Serdes.String(), Serdes.String()));
+        KStream<String, String> secondStream = builder.stream(Constant.SECOND_STRING_TOPIC,
+                Consumed.with(Serdes.String(), Serdes.String()));
+        KStream<String, String> thirdStream = builder.stream(Constant.THIRD_STRING_TOPIC,
+                Consumed.with(Serdes.String(), Serdes.String()));
+
+        KStream<String, String> joined = firstStream.join(secondStream,
+                (firstValue, secondValue) -> "first=" + firstValue + ", second=" + secondValue, /* ValueJoiner */
+                JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
+                StreamJoined.with(
+                        Serdes.String(), /* key */
+                        Serdes.String(),   /* left value */
+                        Serdes.String() /* right value */
+                )
+        ).join(thirdStream,
+                (merged, thirdValue) -> "merged=" + merged + ", thirdValue=" + thirdValue, /* ValueJoiner */
+                JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
+                StreamJoined.with(
+                        Serdes.String(), /* key */
+                        Serdes.String(),   /* left value */
+                        Serdes.String() /* right value */
+                )
+        );
+
+        joined.to(Constant.INNER_MULTIPLE_STRING_TOPIC);
+
+        final Topology topology = builder.build();
+        consumerStringProperties.put(StreamsConfig.APPLICATION_ID_CONFIG, "spike-stream-multiple-inner-join-string");
+        streamsMultipleInnerJoinString = new KafkaStreams(topology, consumerStringProperties);
+        streamsMultipleInnerJoinString.start();
+    }
+
     private void stop () {
         if (streamsInnerJoinString != null) {
             streamsInnerJoinString.close();
+        }
+
+        if (streamsMultipleInnerJoinString != null) {
+            streamsMultipleInnerJoinString.close();
         }
     }
 }

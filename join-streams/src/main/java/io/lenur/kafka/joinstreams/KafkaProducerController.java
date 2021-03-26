@@ -37,4 +37,12 @@ public class KafkaProducerController {
             producer.send(new ProducerRecord<String, String>(Constant.SECOND_STRING_TOPIC, key, key));
         }
     }
+
+    @PostMapping("/producer/string/third/send/{id}")
+    public void sendThirdString(@PathVariable int id) {
+        var key = "correlationId" + id;
+        try (Producer<String, String> producer = new KafkaProducer<>(producerStringProperties)) {
+            producer.send(new ProducerRecord<String, String>(Constant.THIRD_STRING_TOPIC, key, key));
+        }
+    }
 }
