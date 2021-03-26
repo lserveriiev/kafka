@@ -3,6 +3,8 @@ package io.lenur.kafka.joinstreams;
 import io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.lenur.kafka.joinstreams.avro.DummyEvent;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.StreamJoined;
@@ -42,6 +44,7 @@ public class KafkaConsumerController {
     private KafkaStreams streamsInnerJoinString;
     private KafkaStreams streamsMultipleInnerJoinString;
     private KafkaStreams streamsInnerJoinSchema;
+    private KafkaStreams streamsMultipleInnerJoinSchema;
 
     @PostMapping("/consumer/string/inner-join")
     public void streamStringInnerJoin() {
@@ -144,6 +147,49 @@ public class KafkaConsumerController {
         streamsInnerJoinSchema.start();
     }
 
+    @PostMapping("/consumer/schema/multiple-inner-join")
+    public void schemaMultipleInnerJoin() {
+        stop();
+
+        final Map<String, String> serdeConfig = Collections.singletonMap(
+                AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG,
+                config.getKafkaSchemaRegistryUrl());
+
+        final Serde<DummyEvent> valueSpecificAvroSerde = new SpecificAvroSerde<>();
+        valueSpecificAvroSerde.configure(serdeConfig, false);
+
+        final StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, DummyEvent> firstStream = builder.stream(Constant.FIRST_SCHEMA_TOPIC,
+                Consumed.with(Serdes.String(), valueSpecificAvroSerde));
+        KStream<String, DummyEvent> secondStream = builder.stream(Constant.SECOND_SCHEMA_TOPIC,
+                Consumed.with(Serdes.String(), valueSpecificAvroSerde));
+        KStream<String, DummyEvent> thirdStream = builder.stream(Constant.THIRD_SCHEMA_TOPIC,
+                Consumed.with(Serdes.String(), valueSpecificAvroSerde));
+
+        var joined = firstStream.join(secondStream,
+                (firstValue, secondValue) -> firstValue,
+                JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
+                StreamJoined.with(
+                        Serdes.String(),
+                        valueSpecificAvroSerde,
+                        valueSpecificAvroSerde)
+        ).join(thirdStream,
+                (firstValue, secondValue) -> firstValue,
+                JoinWindows.of(TimeUnit.HOURS.toMillis(1)),
+                StreamJoined.with(
+                        Serdes.String(),
+                        valueSpecificAvroSerde,
+                        valueSpecificAvroSerde)
+        );
+
+        joined.to(Constant.INNER_MULTIPLE_SCHEMA_TOPIC);
+
+        final Topology topology = builder.build();
+        consumerAvroProperties.put(StreamsConfig.APPLICATION_ID_CONFIG, "spike-stream-multiple-inner-join-schema-application-id");
+        streamsMultipleInnerJoinSchema = new KafkaStreams(topology, consumerAvroProperties);
+        streamsMultipleInnerJoinSchema.start();
+    }
+
     private void stop() {
         if (streamsInnerJoinString != null) {
             streamsInnerJoinString.close();
@@ -155,6 +201,10 @@ public class KafkaConsumerController {
 
         if (streamsInnerJoinSchema != null) {
             streamsInnerJoinSchema.close();
+        }
+
+        if (streamsMultipleInnerJoinSchema != null) {
+            streamsMultipleInnerJoinSchema.close();
         }
     }
 }

@@ -71,6 +71,14 @@ public class KafkaProducerController {
         }
     }
 
+    @PostMapping("/producer/schema/third/send/{id}")
+    public void sendThirdSchema(@PathVariable int id) {
+        var key = "correlationId" + id;
+        try (KafkaProducer<String, DummyEvent> producer = new KafkaProducer<>(producerAvroProperties)) {
+            producer.send(new ProducerRecord<>(Constant.THIRD_SCHEMA_TOPIC, key, buildDummyEvent(id)));
+        }
+    }
+
     private DummyEvent buildDummyEvent(int id) {
         return DummyEvent
                 .newBuilder()

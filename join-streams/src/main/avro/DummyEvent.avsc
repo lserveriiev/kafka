@@ -2,10 +2,18 @@
   "namespace": "io.lenur.kafka.joinstreams.avro",
   "type": "record",
   "name": "DummyEvent",
-
   "fields": [
-    { "name": "correlationId", "type": "string" },
-    { "name": "documentId", "type": "string" },
-    { "name": "jobType", "type": "string" }
+    {
+      "name": "correlationId",
+      "type": "string"
+    },
+    {
+      "name": "documentId",
+      "type": "string"
+    },
+    {
+      "name": "jobType",
+      "type": "string"
+    }
   ]
 }

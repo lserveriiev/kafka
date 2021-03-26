@@ -9,5 +9,7 @@ public class Constant {
 
     public static final String FIRST_SCHEMA_TOPIC = "spike-first-stream-topic-schema";
     public static final String SECOND_SCHEMA_TOPIC = "spike-second-stream-topic-schema";
+    public static final String THIRD_SCHEMA_TOPIC = "spike-third-stream-topic-schema";
     public static final String INNER_SCHEMA_TOPIC = "spike-inner-stream-topic-schema";
+    public static final String INNER_MULTIPLE_SCHEMA_TOPIC = "spike-multiply-inner-stream-topic-schema";
 }
